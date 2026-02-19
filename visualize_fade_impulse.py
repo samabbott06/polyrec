@@ -272,10 +272,10 @@ def main():
     }
     
     # Example market - change to your target market file
-    log_path = './logs/btc-updown-15m-1963380.csv'
+    log_path = './logs/btc-updown-5m-1963380.csv'
     output_path = './fade_impulse_visualization.png'
-    
-    print("Visualizing Fade Impulse Strategy on btc-updown-15m-1963380...")
+
+    print("Visualizing Fade Impulse Strategy on btc-updown-5m-1963380...")
     simulate_and_visualize(log_path, config, output_path)
 
 if __name__ == '__main__':

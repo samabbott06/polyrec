@@ -2,7 +2,7 @@
 Terminal dashboard that aggregates:
 - CL: Chainlink BTC/USD price via Polymarket RTDS.
 - BN: Binance btcusdt 1s kline price + 1s/5s quote volumes.
-- PM: Polymarket best asks for UP/DOWN (BTC 15m market).
+- PM: Polymarket best asks for UP/DOWN (BTC 5m market).
 
 Requirements:
   pip install requests websocket-client
@@ -50,7 +50,7 @@ class ChainlinkState:
     age: float = 0.0
     price_history: deque = field(default_factory=lambda: deque(maxlen=10), repr=False)  # (ts, price)
     ptb: Optional[float] = None  # Price To Beat (first price of current market)
-    ptb_market_slot: int = 0  # Which 15m slot the PTB belongs to
+    ptb_market_slot: int = 0  # Which 5m slot the PTB belongs to
 
 
 @dataclass
@@ -302,7 +302,7 @@ class DataLogger:
                     continue
                 
                 # Check if we need to rotate file (new market)
-                market_slot = int(row['timestamp_ms'] / 1000) // 900
+                market_slot = int(row['timestamp_ms'] / 1000) // 300
                 if market_slot != self.current_market_slot:
                     self._rotate_file(market_slot)
                 
@@ -326,7 +326,7 @@ class DataLogger:
             print(f"\n[LOGGER] Closed previous market log")
         
         # Use full slug in filename
-        market_slug = f"btc-updown-15m-{market_slot}"
+        market_slug = f"btc-updown-5m-{market_slot}"
         filename = self.output_dir / f"{market_slug}.csv"
         self.csv_file = open(filename, 'w', newline='')
         self.csv_writer = csv.DictWriter(self.csv_file, fieldnames=self.fieldnames)
@@ -359,9 +359,9 @@ def fmt_age(ts: float) -> str:
 
 def update_ptb(price: float, state: 'ChainlinkState') -> None:
     """Update PTB (Price To Beat) if new market started."""
-    current_slot = int(now()) // 900
-    
-    # Check if market slot changed (new 15min period started)
+    current_slot = int(now()) // 300
+
+    # Check if market slot changed (new 5min period started)
     if state.ptb_market_slot != current_slot:
         # New market - reset PTB
         state.ptb = price
@@ -592,17 +592,17 @@ def calculate_lat_dir(bn_price: Optional[float], cl_price: Optional[float],
 
 
 def current_btc_slug() -> str:
-    current_slot = int(now()) // 900 * 900
-    return f"btc-updown-15m-{current_slot}"
+    current_slot = int(now()) // 300 * 300
+    return f"btc-updown-5m-{current_slot}"
 
 
 def time_to_market_end() -> tuple[str, int]:
-    """Calculate time remaining until current 15m market ends.
+    """Calculate time remaining until current 5m market ends.
     Returns: (formatted_time, total_seconds)
     """
     current_time = int(now())
-    current_slot_start = (current_time // 900) * 900
-    current_slot_end = current_slot_start + 900
+    current_slot_start = (current_time // 300) * 300
+    current_slot_end = current_slot_start + 300
     time_left_seconds = current_slot_end - current_time
     
     minutes = time_left_seconds // 60
@@ -921,7 +921,7 @@ def polymarket_worker():
         
         # Calculate market end time + 2 seconds
         current_time = int(now())
-        market_end_time = (current_time // 900) * 900 + 900 + 2
+        market_end_time = (current_time // 300) * 300 + 300 + 2
         time_until_end = market_end_time - current_time
         print(f"[PM] Connected to market, reconnecting in {time_until_end}s")
         
